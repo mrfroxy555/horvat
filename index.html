@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horvátország 2026 - Tervező</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK Setup -->
+    <script type="importmap">
+        {
+          "imports": {
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+            "firebase/analytics": "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js"
+          }
+        }
+    </script>
+</head>
+
+<body>
+
+    <div id="app">
+        <header>
+            <h1>🇭🇷 Horvátország 2026</h1>
+            <p class="subtitle">Segíts kiválasztani a legjobb időpontot a közös kiránduláshoz!</p>
+        </header>
+
+        <!-- Név megadása -->
+        <section id="login-section">
+            <div class="input-group">
+                <input type="text" id="username" placeholder="Írd be a neved..." autocomplete="off">
+            </div>
+            <button class="btn" id="start-btn">Tovább a szavazáshoz</button>
+        </section>
+
+        <!-- Szavazó felület -->
+        <section id="voting-section">
+            <div id="name-display" style="margin-bottom: 1.5rem; font-weight: 600; color: var(--primary);"></div>
+            <div class="week-grid" id="week-grid">
+                <!-- Itt generálja a JS a heteket -->
+            </div>
+            <div style="text-align: center; margin-top: 2.5rem;">
+                <button class="btn" id="submit-votes">Szavazatok beküldése</button>
+            </div>
+        </section>
+
+        <!-- Eredmények (Csak szavazás után látható) -->
+        <section id="results-section">
+            <h2 style="color: var(--primary); margin-bottom: 1rem;">🗳️ Aktuális állás</h2>
+            <div id="results-container">
+                <table class="results-table" id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Időpont</th>
+                            <th>Név</th>
+                            <th>Válasz</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body">
+                        <!-- Ide kerülnek a többiek válaszai -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
