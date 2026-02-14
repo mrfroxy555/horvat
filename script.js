@@ -13,25 +13,15 @@ const firebaseConfig = {
     measurementId: "G-D52EBQRGJG"
 };
 
-// Inicializálás biztonsági hálóval
+// Inicializálás
 let db;
 let analytics;
-
 try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
-    // Az Analytics néha blokkolva van (pl. AdBlock), ezért try-catch-be tesszük
-    try {
-        analytics = getAnalytics(app);
-    } catch (e) {
-        console.warn("Analytics nem érhető el, de az oldal működik.");
-    }
-} catch (error) {
-    console.error("Firebase hiba:", error);
-    alert("Hiba a Firebase betöltésekor! Kérlek frissítsd az oldalt.");
-}
+    try { analytics = getAnalytics(app); } catch (e) { }
+} catch (error) { console.error("Firebase error", error); }
 
-// Elemek lekérése
 const loginSection = document.getElementById('login-section');
 const votingSection = document.getElementById('voting-section');
 const resultsSection = document.getElementById('results-section');
@@ -39,7 +29,9 @@ const usernameInput = document.getElementById('username');
 const startBtn = document.getElementById('start-btn');
 const weekGrid = document.getElementById('week-grid');
 const submitVotesBtn = document.getElementById('submit-votes');
-const resultsBody = document.getElementById('results-body');
+const matrixHeader = document.getElementById('matrix-header');
+const matrixBody = document.getElementById('matrix-body');
+const bestDateCard = document.getElementById('best-date-card');
 const nameDisplay = document.getElementById('name-display');
 
 let currentUser = localStorage.getItem('croatia_user') || '';
@@ -47,152 +39,126 @@ let userVotes = JSON.parse(localStorage.getItem('croatia_votes')) || {};
 let hasVoted = localStorage.getItem('croatia_has_voted') === 'true';
 
 const weeks = [
-    "június 15 - 19.",
-    "június 22 - 26.",
-    "június 29 - július 03.",
-    "július 06 - 10.",
-    "július 13 - 17.",
-    "július 20 - 24.",
-    "július 27 - 31.",
-    "augusztus 03 - 07.",
-    "augusztus 10 - 14.",
-    "augusztus 17 - 21.",
-    "augusztus 24 - 28.",
-    "augusztus 31 - szeptember 04."
+    "június 15 - 19.", "június 22 - 26.", "június 29 - július 03.",
+    "július 06 - 10.", "július 13 - 17.", "július 20 - 24.", "július 27 - 31.",
+    "augusztus 03 - 07.", "augusztus 10 - 14.", "augusztus 17 - 21.",
+    "augusztus 24 - 28.", "augusztus 31 - szeptember 04."
 ];
 
-// Ha már be van lépve, mutassuk a szavazást
-if (currentUser) {
-    setTimeout(showVoting, 100);
-}
-
-// Valós idejű figyelés elindítása
+if (currentUser) { showVoting(); }
 if (db) setupRealtimeUpdates();
 
-// Belépés gomb
 startBtn.addEventListener('click', () => {
     const name = usernameInput.value.trim();
     if (name) {
         currentUser = name;
         localStorage.setItem('croatia_user', name);
         showVoting();
-    } else {
-        alert('Kérlek, írd be a neved!');
     }
 });
 
 function showVoting() {
-    if (!loginSection || !votingSection) return;
     loginSection.classList.add('hidden');
     votingSection.style.display = 'block';
-
-    if (nameDisplay) {
-        nameDisplay.innerText = `Szia, ${currentUser}! Jelöld be, melyik hetek lennének jók neked:`;
-    }
+    nameDisplay.innerText = `Szia, ${currentUser}! Jelöld be, melyik hetek lennének jók neked:`;
     renderWeeks();
-
-    if (hasVoted && resultsSection) {
-        resultsSection.style.display = 'block';
-    }
+    if (hasVoted) resultsSection.style.display = 'block';
 }
 
 function renderWeeks() {
-    if (!weekGrid) return;
     weekGrid.innerHTML = '';
-    weeks.forEach((week) => {
+    weeks.forEach(week => {
         const item = document.createElement('div');
         item.className = 'week-item';
         const currentVote = userVotes[week] || null;
-
         item.innerHTML = `
-            <div class="week-info">
-                <span class="week-dates">${week}</span>
-                <span class="week-label">Hétfő - Péntek</span>
-            </div>
+            <div class="week-info"><span class="week-dates">${week}</span></div>
             <div class="vote-btns">
                 <button class="vote-btn yes ${currentVote === 'yes' ? 'active' : ''}" data-week="${week}" data-vote="yes">✅</button>
                 <button class="vote-btn no ${currentVote === 'no' ? 'active' : ''}" data-week="${week}" data-vote="no">❌</button>
-            </div>
-        `;
+            </div>`;
         weekGrid.appendChild(item);
     });
 
     document.querySelectorAll('.vote-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const btnElem = e.target.closest('button');
-            const week = btnElem.dataset.week;
-            const vote = btnElem.dataset.vote;
-            if (userVotes[week] === vote) {
-                delete userVotes[week];
-            } else {
-                userVotes[week] = vote;
-            }
+        btn.onclick = (e) => {
+            const b = e.target.closest('button');
+            const w = b.dataset.week;
+            const v = b.dataset.vote;
+            userVotes[w] = (userVotes[w] === v) ? null : v;
             localStorage.setItem('croatia_votes', JSON.stringify(userVotes));
             renderWeeks();
-        });
+        };
     });
 }
 
-submitVotesBtn.addEventListener('click', async () => {
-    if (Object.keys(userVotes).length === 0) {
-        alert('Legalább egy időpontra szavazz!');
-        return;
-    }
-
+submitVotesBtn.onclick = async () => {
+    if (Object.keys(userVotes).length === 0) return alert('Szavazz!');
     submitVotesBtn.disabled = true;
-    submitVotesBtn.innerText = 'Küldés...';
-
     try {
-        const promises = Object.keys(userVotes).map(week => {
+        const promises = Object.keys(userVotes).filter(w => userVotes[w]).map(week => {
             return addDoc(collection(db, "votes"), {
-                name: currentUser,
-                week: week,
-                vote: userVotes[week],
-                timestamp: new Date()
+                name: currentUser, week: week, vote: userVotes[week], timestamp: new Date()
             });
         });
-
         await Promise.all(promises);
-
         hasVoted = true;
         localStorage.setItem('croatia_has_voted', 'true');
-        alert('Szavazat elmentve!');
         resultsSection.style.display = 'block';
         resultsSection.scrollIntoView({ behavior: 'smooth' });
-    } catch (e) {
-        console.error("Hiba: ", e);
-        alert('Hiba történt. Ellenőrizd a Firestore Rules-t (legyen Test Mode)!');
-    } finally {
-        submitVotesBtn.disabled = false;
-        submitVotesBtn.innerText = 'Szavazatok beküldése';
-    }
-});
+    } catch (e) { alert('Hiba! Firestore Rules?'); }
+    submitVotesBtn.disabled = false;
+};
 
 function setupRealtimeUpdates() {
-    try {
-        const q = query(collection(db, "votes"), orderBy("timestamp", "desc"));
-        onSnapshot(q, (snapshot) => {
-            const votesList = [];
-            snapshot.forEach((doc) => {
-                votesList.push(doc.data());
-            });
-            renderResults(votesList);
-        });
-    } catch (e) {
-        console.error("Snapshot hiba:", e);
-    }
+    onSnapshot(query(collection(db, "votes"), orderBy("timestamp", "desc")), (snapshot) => {
+        const votes = [];
+        snapshot.forEach(doc => votes.push(doc.data()));
+        renderMatrix(votes);
+    });
 }
 
-function renderResults(votes) {
-    if (!hasVoted || !resultsBody) return;
-    resultsBody.innerHTML = '';
-    votes.forEach(item => {
+function renderMatrix(allVotesFromServer) {
+    if (!hasVoted || !matrixBody) return;
+
+    // 1. Adatok előkészítése: matrix[hét][név] = szavazat
+    const participants = [...new Set(allVotesFromServer.map(v => v.name))];
+    const data = {};
+    weeks.forEach(w => data[w] = {});
+    allVotesFromServer.forEach(v => data[v.week][v.name] = v.vote);
+
+    // 2. Fejléc (Nevek)
+    matrixHeader.innerHTML = '<th>Időpont</th>' + participants.map(p => `<th>${p}</th>`).join('');
+
+    // 3. Sorok (Hetek)
+    matrixBody.innerHTML = '';
+    const weekStats = [];
+
+    weeks.forEach(week => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.week}</td>
-            <td><strong>${item.name}</strong></td>
-            <td><span class="tag ${item.vote}">${item.vote === 'yes' ? 'JÓ' : 'NEM JÓ'}</span></td>
-        `;
-        resultsBody.appendChild(row);
+        let yesCount = 0;
+        let cells = `<td>${week}</td>`;
+
+        participants.forEach(p => {
+            const v = data[week][p];
+            if (v === 'yes') yesCount++;
+            cells += `<td class="vote-cell ${v || ''}">${v === 'yes' ? '✅' : (v === 'no' ? '❌' : '-')}</td>`;
+        });
+
+        row.innerHTML = cells;
+        matrixBody.appendChild(row);
+        weekStats.push({ week, yesCount });
     });
+
+    // 4. Legjobb időpont elemzés
+    const maxYes = Math.max(...weekStats.map(s => s.yesCount));
+    const winners = weekStats.filter(s => s.yesCount === maxYes && maxYes > 0);
+
+    if (winners.length > 0) {
+        bestDateCard.classList.remove('hidden');
+        bestDateCard.innerHTML = `
+            <h3>👑 Legjobb időpontok (${maxYes} szavazat)</h3>
+            <p>${winners.map(w => w.week).join('<br>')}</p>
+        `;
+    }
 }

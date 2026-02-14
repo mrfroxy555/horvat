@@ -50,18 +50,23 @@
 
         <!-- Eredmények (Csak szavazás után látható) -->
         <section id="results-section">
-            <h2 style="color: var(--primary); margin-bottom: 1rem;">🗳️ Aktuális állás</h2>
-            <div id="results-container">
-                <table class="results-table" id="results-table">
+            <div class="results-header">
+                <h2>📊 Ki mikor ér rá?</h2>
+                <div id="best-date-card" class="best-date-card hidden">
+                    <!-- Itt jelenik meg a legjobb időpont -->
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="matrix-table" id="matrix-table">
                     <thead>
-                        <tr>
+                        <tr id="matrix-header">
                             <th>Időpont</th>
-                            <th>Név</th>
-                            <th>Válasz</th>
+                            <!-- Ide jönnek a nevek dinamikusan -->
                         </tr>
                     </thead>
-                    <tbody id="results-body">
-                        <!-- Ide kerülnek a többiek válaszai -->
+                    <tbody id="matrix-body">
+                        <!-- Ide jönnek a hetek és a szavazatok -->
                     </tbody>
                 </table>
             </div>
